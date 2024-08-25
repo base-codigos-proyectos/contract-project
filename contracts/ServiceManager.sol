@@ -7,22 +7,69 @@ pragma solidity ^0.8.4;
 contract ServiceManager {
     // Define un contrato llamado ServiceManager.
 
-    string[] serviceProviders;
-    // Declara un array dinámico de cadenas de texto llamado `serviceProviders` para almacenar los nombres de los proveedores de servicios.
+    mapping(address => ServicesProvider) private serviceProviders;
+    address[] private serviceProviderIndex;
+    enum ServiceCategory {
+        Health,
+        Development,
+        Consultancy,
+        Marketing,
+        IAConsultancy
+    }
+    // Declara un tipo enumerado llamado ServiceCategory que tiene cinco posibles valores:
+    // Health, Development, Consultancy, Marketing e IAConsultancy.
 
-    function createNewServiceProvider(string memory _companyName) external {
-        // Función pública (externa) que permite agregar un nuevo proveedor de servicios al array.
-        // `_companyName` es el nombre de la compañía que se agrega a la lista.
+    struct ServicesProvider {
+        address owner;
+        string companyName;
+        string email;
+        string phone;
+        uint256 serviceAmount;
+        ServiceCategory serviceCategory;
+        uint256 index;
+    }
+    // Declara una estructura llamada ServicesProvider con los siguientes campos:
+    // owner, companyName, email, phone, serviceAmount, serviceCategory, y index.
 
-        serviceProviders.push(_companyName);
-        // Añade el nombre de la compañía proporcionada a la lista de `serviceProviders`.
+    event RegisterServiceProvider(address indexed owner);
+
+    function createNewServiceProvider(
+        string memory _companyName,
+        string memory _email,
+        string memory _phone,
+        uint256 _serviceAmount,
+        ServiceCategory _serviceCategory
+    ) external {
+        // Asegúrate de que el proveedor no esté ya registrado
+        require(serviceProviders[msg.sender].owner == address(0), "Service provider already exists");
+
+        // Registra la dirección del proveedor
+        serviceProviderIndex.push(msg.sender);
+        serviceProviders[msg.sender] = ServicesProvider({
+            owner: msg.sender,
+            companyName: _companyName,
+            email: _email,
+            phone: _phone,
+            serviceAmount: _serviceAmount,
+            serviceCategory: _serviceCategory,
+            index: serviceProviderIndex.length - 1
+        });
+
+        emit RegisterServiceProvider(msg.sender);
     }
 
-    function getServiceProviders() external view returns (string[] memory) {
-        // Función pública (externa) y de solo lectura (view) que devuelve la lista de proveedores de servicios.
-        // La función retorna un array de cadenas de texto que contiene los nombres de los proveedores de servicios.
+    function getServiceProvider(address _address) external view returns (ServicesProvider memory) {
+        // Verifica que haya proveedores registrados
+        require(serviceProviderIndex.length != 0, "No service providers");
 
-        return serviceProviders;
-        // Devuelve el array `serviceProviders`.
+        // Verifica que el proveedor de servicios exista
+        require(serviceProviders[_address].owner != address(0), "Service provider does not exist");
+
+        return serviceProviders[_address];
+    }
+
+    // Si quieres devolver la lista de direcciones de todos los proveedores de servicios
+    function getAllServiceProviders() external view returns (address[] memory) {
+        return serviceProviderIndex;
     }
 }
