@@ -3,12 +3,15 @@
 
 pragma solidity ^0.8.4;
 // Especifica la versión del compilador de Solidity que debe usarse. Aquí se está utilizando la versión 0.8.4.
+import "./ServiceAgreement.sol"; // Importar el contrato ServiceAgreement
 
 contract ServiceManager {
-    // Define un contrato llamado ServiceManager.
-
     mapping(address => ServicesProvider) private serviceProviders;
     address[] private serviceProviderIndex;
+
+    mapping(address => address[]) private clientAgreements; // Para almacenar acuerdos de servicio por cliente
+    mapping(address => address[]) private providerAgreements; // Para almacenar acuerdos de servicio por cliente
+
     enum ServiceCategory {
         Health,
         Development,
@@ -18,6 +21,17 @@ contract ServiceManager {
     }
     // Declara un tipo enumerado llamado ServiceCategory que tiene cinco posibles valores:
     // Health, Development, Consultancy, Marketing e IAConsultancy.
+
+    modifier validProviderOnly(address _provider) {
+        require(serviceProviderIndex.length != 0, "No service providers");
+
+        // Verifica que el proveedor de servicios exista
+        require(
+            serviceProviders[_provider].owner != address(0),
+            "Service provider does not exist"
+        );
+        _;
+    }
 
     struct ServicesProvider {
         address owner;
@@ -33,6 +47,15 @@ contract ServiceManager {
 
     event RegisterServiceProvider(address indexed owner);
 
+    event NewAgreement(
+        address indexed client,
+        address indexed provider,
+        address agreemenAddress
+    );
+
+    event ErrorNotice(string message);
+    event ErrorNoticeBytes(bytes data);
+
     function createNewServiceProvider(
         string memory _companyName,
         string memory _email,
@@ -41,7 +64,10 @@ contract ServiceManager {
         ServiceCategory _serviceCategory
     ) external {
         // Asegúrate de que el proveedor no esté ya registrado
-        require(serviceProviders[msg.sender].owner == address(0), "Service provider already exists");
+        require(
+            serviceProviders[msg.sender].owner == address(0),
+            "Service provider already exists"
+        );
 
         // Registra la dirección del proveedor
         serviceProviderIndex.push(msg.sender);
@@ -58,18 +84,66 @@ contract ServiceManager {
         emit RegisterServiceProvider(msg.sender);
     }
 
-    function getServiceProvider(address _address) external view returns (ServicesProvider memory) {
-        // Verifica que haya proveedores registrados
-        require(serviceProviderIndex.length != 0, "No service providers");
-
-        // Verifica que el proveedor de servicios exista
-        require(serviceProviders[_address].owner != address(0), "Service provider does not exist");
-
+    function getServiceProvider(
+        address _address
+    )
+        external
+        view
+        validProviderOnly(_address)
+        returns (ServicesProvider memory)
+    {
         return serviceProviders[_address];
     }
 
-    // Si quieres devolver la lista de direcciones de todos los proveedores de servicios
-    function getAllServiceProviders() external view returns (address[] memory) {
-        return serviceProviderIndex;
+    // devolver la lista de direcciones de todos los proveedores de servicios
+    // function getAllServiceProviders() external view returns (address[] memory) {
+    //     return serviceProviderIndex;
+    // }
+    function getAllServiceProviders()
+        external
+        view
+        returns (ServicesProvider[] memory)
+    {
+        ServicesProvider[]
+            memory validServiceProviders = new ServicesProvider[](
+                serviceProviderIndex.length
+            );
+
+        for (uint256 i = 0; i < serviceProviderIndex.length; i++) {
+            address currentAddress = serviceProviderIndex[i];
+            // Añadir el proveedor de servicios al array
+            validServiceProviders[i] = serviceProviders[currentAddress];
+        }
+
+        return validServiceProviders;
+    }
+
+    function createServiceAgreement(
+        address _provider
+    ) external validProviderOnly(_provider) {
+        require(
+            _provider != msg.sender,
+            "providers cannot create service agreemt with theserves"
+        );
+        uint256 amount = serviceProviders[_provider].serviceAmount;
+        require(msg.sender.balance >= amount, "no tiene fondos sufucientes");
+
+        try new ServiceAgreement(msg.sender, _provider, amount) returns (
+            ServiceAgreement serviceAgreement
+        ) {
+            address agreementAddress = address(serviceAgreement);
+
+            address[] storage ca = clientAgreements[msg.sender];
+            ca.push(agreementAddress);
+
+            address[] storage pa = providerAgreements[_provider];
+            pa.push(agreementAddress);
+
+            emit NewAgreement(msg.sender, _provider, agreementAddress);
+        } catch Error(string memory reason) {
+            emit ErrorNotice(reason);
+        } catch (bytes memory reason) {
+            emit ErrorNoticeBytes(reason);
+        }
     }
 }

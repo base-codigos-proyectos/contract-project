@@ -1,10 +1,47 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "C:\\capacitacion\\blochain\\base\\contracts\\.sol": {
-      "lastModificationDate": 1724613685701,
-      "contentHash": "bc58b93e6f2ab97e0cee42be503a72a6",
-      "sourceName": "contracts/.sol",
+    "C:\\capacitacion\\blochain\\base\\contracts\\ServiceManager.sol": {
+      "lastModificationDate": 1724643011492,
+      "contentHash": "1ce193e9e1531fe808326b9e346072af",
+      "sourceName": "contracts/ServiceManager.sol",
+      "solcConfig": {
+        "version": "0.8.4",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./ServiceAgreement.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.4"
+      ],
+      "artifacts": [
+        "ServiceManager"
+      ]
+    },
+    "C:\\capacitacion\\blochain\\base\\contracts\\ServiceAgreement.sol": {
+      "lastModificationDate": 1724638175395,
+      "contentHash": "acd1ab1d763f18a2300b76c3c9462242",
+      "sourceName": "contracts/ServiceAgreement.sol",
       "solcConfig": {
         "version": "0.8.4",
         "settings": {
@@ -33,7 +70,7 @@
         "^0.8.4"
       ],
       "artifacts": [
-        "ServiceManager"
+        "ServiceAgreement"
       ]
     }
   }
