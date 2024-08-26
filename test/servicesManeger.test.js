@@ -83,75 +83,68 @@ describe("Service Providers", () => {
       expect(receipt.status).to.equal(1);
     });
     it("should allow for retrieving multiple service providers", async () => {
-        await instance
-            .connect(provider)
-            .createNewServiceProvider(
-                serviceProvider1.companyName,
-                serviceProvider1.email,
-                serviceProvider1.phone,
-                serviceProvider1.serviceAmount,
-                serviceProvider1.serviceCategory
-            );
-        await instance
-            .connect(client) // Cambiar a 'client' para usar una dirección diferente
-            .createNewServiceProvider(
-                serviceProvider2.companyName,
-                serviceProvider2.email,
-                serviceProvider2.phone,
-                serviceProvider2.serviceAmount,
-                serviceProvider2.serviceCategory
-            );
-    
-        const value = await instance.getAllServiceProviders();
-    
-        expect(value.length).to.equal(2);
+      await instance
+        .connect(provider)
+        .createNewServiceProvider(
+          serviceProvider1.companyName,
+          serviceProvider1.email,
+          serviceProvider1.phone,
+          serviceProvider1.serviceAmount,
+          serviceProvider1.serviceCategory
+        );
+      await instance
+        .connect(client) // Cambiar a 'client' para usar una dirección diferente
+        .createNewServiceProvider(
+          serviceProvider2.companyName,
+          serviceProvider2.email,
+          serviceProvider2.phone,
+          serviceProvider2.serviceAmount,
+          serviceProvider2.serviceCategory
+        );
+
+      const value = await instance.getAllServiceProviders();
+
+      expect(value.length).to.equal(2);
     });
 
     it("Get Service Providers will return empty array if there are no service providers", async () => {
-        const value = await instance.getAllServiceProviders();
-    
-        expect(value.length).to.equal(0);
+      const value = await instance.getAllServiceProviders();
+
+      expect(value.length).to.equal(0);
     });
 
     it("should keep integrity of the providers index", async () => {
-        await instance
+      await instance
         .connect(provider)
         .createNewServiceProvider(
-            serviceProvider1.companyName,
-            serviceProvider1.email,
-            serviceProvider1.phone,
-            serviceProvider1.serviceAmount,
-            serviceProvider1.serviceCategory
+          serviceProvider1.companyName,
+          serviceProvider1.email,
+          serviceProvider1.phone,
+          serviceProvider1.serviceAmount,
+          serviceProvider1.serviceCategory
         );
-    await instance
+      await instance
         .connect(client)
         .createNewServiceProvider(
-            serviceProvider2.companyName,
-            serviceProvider2.email,
-            serviceProvider2.phone,
-            serviceProvider2.serviceAmount,
-            serviceProvider2.serviceCategory
+          serviceProvider2.companyName,
+          serviceProvider2.email,
+          serviceProvider2.phone,
+          serviceProvider2.serviceAmount,
+          serviceProvider2.serviceCategory
         );
 
-    const [, , , , , , index2] = await instance.getServiceProvider(
+      const [, , , , , , index2] = await instance.getServiceProvider(
         provider.address
-    );
-    expect(index2).to.be.equal(0);
+      );
+      expect(index2).to.be.equal(0);
 
-    const [, , , , , , index3] = await instance.getServiceProvider(
+      const [, , , , , , index3] = await instance.getServiceProvider(
         client.address
-    );
-    expect(index3).to.be.equal(1);
+      );
+      expect(index3).to.be.equal(1);
     });
 
-    it("emits an event including provider address on creation of a new service provider", async () => {
-       
-    });
-    
-    
-
-    
-       
+    it("emits an event including provider address on creation of a new service provider", async () => {});
   });
   describe("Service Provider Errors", () => {
     it("should return error when there are no service providers", async () => {
@@ -175,5 +168,27 @@ describe("Service Providers", () => {
         instance.getServiceProvider(client.address)
       ).to.be.revertedWith("Service provider does not exist");
     });
+  });
+
+  describe("Service Agreements", () => {
+    let retrieved;
+
+    beforeEach(async () => {
+      await instance
+        .connect(provider)
+        .createNewServiceProvider(
+          serviceProvider1.companyName,
+          serviceProvider1.email,
+          serviceProvider1.phone,
+          serviceProvider1.serviceAmount,
+          serviceProvider1.serviceCategory
+        );
+
+      [retrieved] = await instance
+        .connect(client)
+        .getServiceProvider(provider.address);
+    });
+
+    
   });
 });
