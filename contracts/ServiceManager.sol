@@ -95,10 +95,6 @@ contract ServiceManager {
         return serviceProviders[_address];
     }
 
-    // devolver la lista de direcciones de todos los proveedores de servicios
-    // function getAllServiceProviders() external view returns (address[] memory) {
-    //     return serviceProviderIndex;
-    // }
     function getAllServiceProviders()
         external
         view
@@ -146,4 +142,15 @@ contract ServiceManager {
             emit ErrorNoticeBytes(reason);
         }
     }
+
+     function getProviderServiceAgreements(address provider) external view returns (address[] memory) {
+        return providerAgreements[provider];
+    }
+
+     function getClientServiceAgreements(address client) external view returns (address[] memory) {
+        return clientAgreements[client];
+    }
+
+
+
 }

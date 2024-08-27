@@ -189,6 +189,68 @@ describe("Service Providers", () => {
         .getServiceProvider(provider.address);
     });
 
+    it("should have a valid service provider after setup", async () => {
+      retrieved = await instance
+        .connect(provider)
+        .getServiceProvider(provider.address);
+
+      expect(retrieved.companyName).to.equal(serviceProvider1.companyName);
+      expect(retrieved.email).to.equal(serviceProvider1.email);
+    });
+
+    it("should create a new ServiceAgreement between Provider and client", async () => {
+      await instance.connect(client).createServiceAgreement(retrieved);
+
+      const clientAgreements = await instance.getClientServiceAgreements(
+        client.address
+      );
+      const providerAgreements = await instance.getProviderServiceAgreements(
+        provider.address
+      );
+
+      expect(clientAgreements.length).to.be.equal(1);
+      expect(providerAgreements.length).to.be.equal(1);
+    });
     
   });
+  describe("ServiceManager Service Agreement Errors", () => {
+    let retrieved, amount, tx;
+
+    beforeEach(async () => {
+        await instance
+            .connect(provider)
+            .createNewServiceProvider(
+                serviceProvider1.companyName,
+                serviceProvider1.email,
+                serviceProvider1.phone,
+                ethers.utils.parseUnits("20000", "ether"),
+                serviceProvider1.serviceCategory
+            );
+
+        [retrieved, , , , , amount] = await instance
+            .connect(provider)
+            .getServiceProvider(provider.address);
+    });
+
+    it("should not allow providers to create agreements with themselves", async () => {
+        await expect(
+            instance.connect(provider).createServiceAgreement(provider.address)
+        ).to.be.revertedWith("providers cannot create service agreemt with theserves");
+    });
+
+    it("should not allow agreement for less than the specified service amount", async () => {
+        try {
+            await instance
+                .connect(client) // Cliente sin suficientes fondos
+                .createServiceAgreement(retrieved);
+            expect.fail("Expected error not thrown");
+        } catch (err) {
+            expect(err.message).to.include("no tiene fondos sufucientes"); // Mensaje ajustado en español
+        }
+    });
+
+});
+
+
+
 });
