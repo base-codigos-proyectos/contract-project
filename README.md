@@ -90,3 +90,343 @@ Aquí tienes una lista de funciones que podrías considerar agregar a tu contrat
 Estas funciones cubrirían aspectos clave de una aplicación de citas, desde la gestión de usuarios y la interacción, hasta la moderación y la monetización. Implementarlas te permitirá crear una plataforma más completa y segura, que ofrezca una buena experiencia de usuario.
 
 
+
+
+
+// SPDX-License-Identifier: PRIVATE
+pragma solidity ^0.8.4;
+
+import "./ServiceAgreement.sol"; // Importar el contrato ServiceAgreement
+
+contract ServiceManager {
+    mapping(address => ServicesProvider) private serviceProviders;
+    address[] private serviceProviderIndex;
+
+    mapping(address => address[]) private clientAgreements; // Para almacenar acuerdos de servicio por cliente
+    mapping(address => address[]) private providerAgreements;
+
+    address public platformAddress; // Dirección de la plataforma
+
+    enum ServiceCategory {
+        Health,
+        Development,
+        Consultancy,
+        Marketing,
+        IAConsultancy
+    }
+
+    modifier validProviderOnly(address _provider) {
+        require(serviceProviderIndex.length != 0, "No service providers");
+        require(
+            serviceProviders[_provider].owner != address(0),
+            "Service provider does not exist"
+        );
+        _;
+    }
+
+    struct ServicesProvider {
+        address owner;
+        string companyName;
+        string email;
+        string phone;
+        uint256 serviceAmount;
+        ServiceCategory serviceCategory;
+        uint256 index;
+    }
+
+    event RegisterServiceProvider(address indexed owner);
+    event NewAgreement(
+        address indexed client,
+        address indexed provider,
+        address agreementAddress
+    );
+    event ErrorNotice(string message);
+    event ErrorNoticeBytes(bytes data);
+
+    constructor(address _platformAddress) {
+        platformAddress = _platformAddress; // Establecer la dirección de la plataforma en el constructor
+    }
+
+    function createNewServiceProvider(
+        string memory _companyName,
+        string memory _email,
+        string memory _phone,
+        uint256 _serviceAmount,
+        ServiceCategory _serviceCategory
+    ) external {
+        require(
+            serviceProviders[msg.sender].owner == address(0),
+            "Service provider already exists"
+        );
+
+        serviceProviderIndex.push(msg.sender);
+        serviceProviders[msg.sender] = ServicesProvider({
+            owner: msg.sender,
+            companyName: _companyName,
+            email: _email,
+            phone: _phone,
+            serviceAmount: _serviceAmount,
+            serviceCategory: _serviceCategory,
+            index: serviceProviderIndex.length - 1
+        });
+
+        emit RegisterServiceProvider(msg.sender);
+    }
+
+    function getServiceProvider(
+        address _address
+    )
+        external
+        view
+        validProviderOnly(_address)
+        returns (ServicesProvider memory)
+    {
+        return serviceProviders[_address];
+    }
+
+    function getAllServiceProviders()
+        external
+        view
+        returns (ServicesProvider[] memory)
+    {
+        ServicesProvider[]
+            memory validServiceProviders = new ServicesProvider[](
+                serviceProviderIndex.length
+            );
+
+        for (uint256 i = 0; i < serviceProviderIndex.length; i++) {
+            address currentAddress = serviceProviderIndex[i];
+            validServiceProviders[i] = serviceProviders[currentAddress];
+        }
+
+        return validServiceProviders;
+    }
+
+    function createServiceAgreement(
+        address _provider
+    ) external validProviderOnly(_provider) {
+        require(
+            _provider != msg.sender,
+            "providers cannot create service agreement with themselves"
+        );
+
+        uint256 amount = serviceProviders[_provider].serviceAmount;
+        require(msg.sender.balance >= amount, "no tiene fondos suficientes");
+
+        try new ServiceAgreement(msg.sender, _provider, amount, platformAddress) returns (
+            ServiceAgreement serviceAgreement
+        ) {
+            address agreementAddress = address(serviceAgreement);
+
+            clientAgreements[msg.sender].push(agreementAddress);
+            providerAgreements[_provider].push(agreementAddress);
+
+            emit NewAgreement(msg.sender, _provider, agreementAddress);
+        } catch Error(string memory reason) {
+            emit ErrorNotice(reason);
+        } catch (bytes memory reason) {
+            emit ErrorNoticeBytes(reason);
+        }
+    }
+
+    function getClientServiceAgreements(
+        address _clientAddress
+    ) external view returns (address[] memory) {
+        return clientAgreements[_clientAddress];
+    }
+
+    function getProviderServiceAgreements(
+        address _provider
+    ) external view returns (address[] memory) {
+        return providerAgreements[_provider];
+    }
+}
+
+
+
+// SPDX-License-Identifier: PRIVATE
+pragma solidity ^0.8.1;
+
+/**
+ * @title ServiceAgreement
+ * Implements Service Agreement between two parties
+ */
+contract ServiceAgreement {
+    address public client;
+    address public provider;
+    uint256 public termsAmount;
+    address public platform; // Dirección de la plataforma
+    uint256 public platformCommissionRate = 2; // 2% de comisión para la plataforma
+    WorkStatus public agreementStatus;
+    ClientApprovalStatus public clientApprovalStatus;
+    Rating public clientRating;
+    bool private agreementFulfilledOrNullified;
+
+    constructor(address _client, address _provider, uint256 _termsAmount, address _platform) {
+        client = _client;
+        provider = _provider;
+        termsAmount = _termsAmount;
+        platform = _platform; // Establecer la dirección de la plataforma
+        agreementStatus = WorkStatus.NotStarted;
+        clientApprovalStatus = ClientApprovalStatus.WaitingForApproval;
+        clientRating = Rating.UnRated;
+        agreementFulfilledOrNullified = false;
+    }
+
+    modifier providerOnly() {
+        require(
+            msg.sender == provider,
+            "Only the service provider can call this."
+        );
+        _;
+    }
+
+    modifier clientOnly() {
+        require(msg.sender == client, "Only the client can call this.");
+        _;
+    }
+
+    enum WorkStatus {
+        NotStarted,
+        Started,
+        Completed,
+        WillNotComplete
+    }
+
+    enum ClientApprovalStatus {
+        WaitingForApproval,
+        Approved,
+        Unapproved
+    }
+
+    enum Rating {
+        UnRated,
+        OneStar,
+        TwoStar,
+        ThreeStar,
+        FourStar,
+        FiveStar
+    }
+
+    event ServiceStatusUpdate(
+        address indexed agreementAddress,
+        WorkStatus agreementStatus
+    );
+
+    event AgreementFulfilled(
+        address indexed agreementAddress,
+        Rating clientRating,
+        ClientApprovalStatus clientApprovalStatus,
+        WorkStatus agreementStatus
+    );
+
+    function updateServiceStatus(WorkStatus _status) external providerOnly {
+        agreementStatus = _status;
+        emit ServiceStatusUpdate(address(this), agreementStatus);
+    }
+
+    function updateClientApprovalStatus(
+        ClientApprovalStatus _approve
+    ) external clientOnly {
+        require(
+            agreementStatus == WorkStatus.Completed,
+            "The contract must be marked as completed by the service provider"
+        );
+        clientApprovalStatus = _approve;
+    }
+
+    function rateServiceProvider(Rating _rating) external clientOnly {
+        clientRating = _rating;
+    }
+
+    function deposit() external payable clientOnly {
+        require(
+            !agreementFulfilledOrNullified,
+            "Agreement has already been fulfilled"
+        );
+    }
+
+    function getAgreementDetails()
+        external
+        view
+        returns (
+            address,
+            address,
+            uint256,
+            WorkStatus,
+            ClientApprovalStatus,
+            Rating,
+            bool,
+            uint256
+        )
+    {
+        return (
+            client,
+            provider,
+            address(this).balance,
+            agreementStatus,
+            clientApprovalStatus,
+            clientRating,
+            agreementFulfilledOrNullified,
+            termsAmount
+        );
+    }
+
+    function transferFundsToProvider() external providerOnly {
+        require(
+            !agreementFulfilledOrNullified,
+            "This agreement has already been fulfilled or nullified"
+        );
+        require(
+            address(this).balance >= termsAmount,
+            "Contract balance requirement has not been met"
+        );
+        require(
+            agreementStatus == WorkStatus.Completed &&
+                clientApprovalStatus == ClientApprovalStatus.Approved,
+            "Service was not completed or approved"
+        );
+
+        // Calcular y transferir la comisión a la plataforma
+        uint256 commission = payPlatformCommission();
+        
+        // Transferir el monto restante al proveedor
+        uint256 amountAfterCommission = address(this).balance - commission;
+        closeOutBalance(provider, amountAfterCommission);
+    }
+
+    function payPlatformCommission() private returns (uint256) {
+        uint256 commission = (termsAmount * platformCommissionRate) / 100;
+        (bool success, ) = payable(platform).call{value: commission}("");
+        require(success, "Commission transfer failed");
+        return commission;
+    }
+
+    function refund() external clientOnly {
+        require(
+            !agreementFulfilledOrNullified,
+            "This agreement has already been fulfilled or nullified"
+        );
+        require(
+            agreementStatus == WorkStatus.WillNotComplete,
+            "The agreement has not been marked as Will Not Complete"
+        );
+        require(address(this).balance > 0, "There are no funds to refund");
+
+        closeOutBalance(client, address(this).balance);
+    }
+
+    function closeOutBalance(address _address, uint256 _amount) private {
+        agreementFulfilledOrNullified = true;
+
+        emit AgreementFulfilled(
+            address(this),
+            clientRating,
+            clientApprovalStatus,
+            agreementStatus
+        );
+
+        (bool success, ) = payable(_address).call{value: _amount}("");
+        require(success, "Transfer unsuccessful");
+    }
+}
