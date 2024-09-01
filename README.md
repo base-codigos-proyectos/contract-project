@@ -89,43 +89,4 @@ Aquí tienes una lista de funciones que podrías considerar agregar a tu contrat
 
 Estas funciones cubrirían aspectos clave de una aplicación de citas, desde la gestión de usuarios y la interacción, hasta la moderación y la monetización. Implementarlas te permitirá crear una plataforma más completa y segura, que ofrezca una buena experiencia de usuario.
 
-// SPDX-License-Identifier: PRIVATE
-// Indica la licencia bajo la cual se distribuye el contrato. En este caso, es una licencia privada.
-
-pragma solidity ^0.8.4;
-// Especifica la versión del compilador de Solidity que debe usarse. Aquí se está utilizando la versión 0.8.4.
-
-contract ServiceManager {
-    // Define un contrato llamado ServiceManager.
-    struct ServicesProvider {
-         string  companyName;
-        string  email;
-        string  phone;
-        uint256 serviveAmount;
-    }
-    // string[] serviceProviders;
-    // Declara un array dinámico de cadenas de texto llamado `serviceProviders` para almacenar los nombres de los proveedores de servicios.
-
-    function createNewServiceProvider(
-        string memory _companyName,
-        string memory _email,
-        string memory _phone,
-        uint256 _serviveAmount
-        ) external {
-        // Función pública (externa) que permite agregar un nuevo proveedor de servicios al array.
-        // `_companyName` es el nombre de la compañía que se agrega a la lista.
-
-        // serviceProviders.push(_companyName);
-        // Añade el nombre de la compañía proporcionada a la lista de `serviceProviders`.
-    }
-
-    function getServiceProviders() external view returns (string[] memory) {
-        // Función pública (externa) y de solo lectura (view) que devuelve la lista de proveedores de servicios.
-        // La función retorna un array de cadenas de texto que contiene los nombres de los proveedores de servicios.
-
-        return serviceProviders;
-        // Devuelve el array `serviceProviders`.
-    }
-}
-
 

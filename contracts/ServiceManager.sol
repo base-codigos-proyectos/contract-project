@@ -8,9 +8,10 @@ import "./ServiceAgreement.sol"; // Importar el contrato ServiceAgreement
 contract ServiceManager {
     mapping(address => ServicesProvider) private serviceProviders;
     address[] private serviceProviderIndex;
+    // event Debug(string message, uint256 value);
 
     mapping(address => address[]) private clientAgreements; // Para almacenar acuerdos de servicio por cliente
-    mapping(address => address[]) private providerAgreements; // Para almacenar acuerdos de servicio por cliente
+    mapping(address => address[]) private providerAgreements;
 
     enum ServiceCategory {
         Health,
@@ -121,8 +122,13 @@ contract ServiceManager {
             _provider != msg.sender,
             "providers cannot create service agreemt with theserves"
         );
+
         uint256 amount = serviceProviders[_provider].serviceAmount;
+        // emit Debug("Required service amount", amount); // Debugging el monto requerido
+
         require(msg.sender.balance >= amount, "no tiene fondos sufucientes");
+
+        // emit Debug("Sender balance", msg.sender.balance); // Debugging balance del sender
 
         try new ServiceAgreement(msg.sender, _provider, amount) returns (
             ServiceAgreement serviceAgreement
@@ -143,14 +149,15 @@ contract ServiceManager {
         }
     }
 
-     function getProviderServiceAgreements(address provider) external view returns (address[] memory) {
-        return providerAgreements[provider];
+    function getClientServiceAgreements(
+        address _clientAddress
+    ) external view returns (address[] memory) {
+        return clientAgreements[_clientAddress];
     }
 
-     function getClientServiceAgreements(address client) external view returns (address[] memory) {
-        return clientAgreements[client];
+    function getProviderServiceAgreements(
+        address _provider
+    ) external view returns (address[] memory) {
+        return providerAgreements[_provider];
     }
-
-
-
 }
